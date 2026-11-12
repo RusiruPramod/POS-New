@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unyt Mart - POS System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        primaryHover: '#2563eb',
+                        darkBg: '#0f172a',
+                        darkPanel: '#1e293b',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Updated Print CSS with Dual Print & Landscape Support */
+        @media print {
+            body:not(.printing-finance) * { visibility: hidden; }
+            body:not(.printing-finance) #print-wrapper, body:not(.printing-finance) #print-wrapper * { visibility: visible; }
+            
+            #print-wrapper {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: #fff !important;
+                color: #000 !important;
+            }
+
+            /* --- DUAL PRINT MODE (LANDSCAPE DIVIDED IN HALF) --- */
+            #print-wrapper.dual-print-mode {
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: space-between !important;
+                align-items: flex-start !important;
+                width: 100% !important;
+                height: 100% !important;
+                box-sizing: border-box;
+            }
+
+            #print-wrapper.dual-print-mode .receipt-content {
+                width: 48% !important;
+                max-width: 48% !important;
+                margin: 0 !important;
+                padding: 5mm !important;
+                border: 1px dashed #000;
+                box-sizing: border-box;
+                page-break-inside: avoid;
+            }
+
+            #print-wrapper:not(.dual-print-mode) #receipt-print-area-merchant {
+                display: none !important;
+            }
+
+            /* --- THERMAL RECEIPT STYLES (58mm / 80mm) --- */
+            .receipt-content.thermal-size {
+                margin: 0 auto;
+                padding: 5mm;
+                font-family: 'Courier New', Courier, monospace;
+            }
+            #print-wrapper:not(.dual-print-mode) .receipt-content.thermal-size {
+                max-width: var(--receipt-width, 80mm);
+            }
+            .receipt-content.thermal-size .print-header h2 { font-size: 1.2rem !important; }
+            .receipt-content.thermal-size .print-header div { font-size: 0.8rem !important; }
+            .receipt-content.thermal-size .print-info-grid { display: block !important; font-size: 0.8rem !important; }
+            .receipt-content.thermal-size #print-customer-box { text-align: left !important; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #000; }
+            .receipt-content.thermal-size #print-barcode-area { width: 100% !important; margin: 10px auto !important; height: 40px !important; }
+            .receipt-content.thermal-size .print-table { font-size: 0.8rem !important; }
+            .receipt-content.thermal-size .print-table th, 
+            .receipt-content.thermal-size .print-table td { padding: 3px 2px !important; }
+            .receipt-content.thermal-size .print-totals { max-width: 100% !important; font-size: 0.85rem !important; }
+            .receipt-content.thermal-size .print-totals div:last-child { font-size: 1rem !important; }
+
+            /* --- A6 INVOICE STYLES --- */
+            @page { margin: 0; }
+            .receipt-content.a6-size {
+                padding: 10mm;
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                box-sizing: border-box;
+            }
+            #print-wrapper:not(.dual-print-mode) .receipt-content.a6-size {
+                width: 105mm !important;
+                min-height: 148mm !important;
+                margin: 0;
+            }
+
+            /* --- A5 INVOICE STYLES --- */
+            .receipt-content.a5-size {
+                padding: 15mm;
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                box-sizing: border-box;
+            }
+            #print-wrapper:not(.dual-print-mode) .receipt-content.a5-size {
+                width: 148mm !important;
+                min-height: 210mm !important;
+                margin: 0 auto;
+            }
+            .receipt-content.a5-size .print-header h2 { font-size: 1.5rem !important; }
+            .receipt-content.a5-size .print-table { font-size: 0.95rem !important; }
+            .receipt-content.a5-size .print-totals { font-size: 0.95rem !important; max-width: 250px !important; }
+            
+            /* --- A4 INVOICE STYLES --- */
+            .receipt-content.a4-size {
+                padding: 20mm;
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                box-sizing: border-box;
+            }
+            #print-wrapper:not(.dual-print-mode) .receipt-content.a4-size {
+                width: 210mm !important;
+                min-height: 297mm !important;
+                margin: 0 auto;
+            }
+            .receipt-content.a4-size .print-header h2 { font-size: 2rem !important; }
+            .receipt-content.a4-size .print-table { font-size: 1rem !important; }
+            .receipt-content.a4-size .print-totals { font-size: 1rem !important; max-width: 300px !important; }
+
+            /* --- FINANCIAL STATEMENT PORTRAIT PRINT STYLES --- */
+            body.printing-finance * { visibility: hidden; }
+            body.printing-finance #finance-print-wrapper, body.printing-finance #finance-print-wrapper * { visibility: visible; }
+            #finance-print-wrapper {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 210mm !important;
+                min-height: 297mm !important;
+                padding: 20mm;
+                background: #fff !important;
+                color: #000 !important;
+                box-sizing: border-box;
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            }
+        }
+        
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="bg-darkBg text-gray-100 font-sans h-screen w-screen overflow-hidden flex select-none">
+
+    <!-- Auth Overlay (Login / Signup) -->
+    <div id="auth-overlay" class="fixed inset-0 bg-darkBg z-50 flex items-center justify-center p-4">
+        <div class="glass p-8 rounded-2xl w-full max-w-md border border-gray-700 shadow-2xl">
+            <div class="text-center mb-6">
+                <h1 class="text-3xl font-bold text-primary mb-1">Unyt Mart POS</h1>
+                <p class="text-sm text-gray-400" id="auth-subtitle">Sign in to access your system from any device</p>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="flex bg-gray-900 rounded-lg p-1 mb-6 border border-gray-700">
+                <button type="button" id="tab-login-btn" onclick="app.switchAuthTab('login')" class="flex-1 py-2 rounded-md font-bold text-sm bg-primary text-white transition">Login</button>
+                <button type="button" id="tab-signup-btn" onclick="app.switchAuthTab('signup')" class="flex-1 py-2 rounded-md font-bold text-sm text-gray-400 hover:text-white transition">Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="form-login" onsubmit="app.handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Email Address</label>
+                    <input type="email" id="login-email" required class="w-full bg-darkBg border border-gray-600 rounded-lg py-2.5 px-3 text-white text-sm focus:border-primary focus:outline-none" placeholder="admin@unytmart.com">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Password</label>
+                    <input type="password" id="login-password" required class="w-full bg-darkBg border border-gray-600 rounded-lg py-2.5 px-3 text-white text-sm focus:border-primary focus:outline-none" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full py-3 bg-primary hover:bg-primaryHover text-white rounded-lg font-bold transition shadow-lg shadow-blue-500/30 mt-2">Login to POS</button>
+            </form>
+
+            <!-- Signup Form -->
+            <form id="form-signup" onsubmit="app.handleSignup(event)" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Email Address</label>
+                    <input type="email" id="signup-email" required class="w-full bg-darkBg border border-gray-600 rounded-lg py-2.5 px-3 text-white text-sm focus:border-primary focus:outline-none" placeholder="admin@unytmart.com">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Password</label>
+                    <input type="password" id="signup-password" required minlength="6" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2.5 px-3 text-white text-sm focus:border-primary focus:outline-none" placeholder="••••••••">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Confirm Password</label>
+                    <input type="password" id="signup-confirm-password" required minlength="6" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2.5 px-3 text-white text-sm focus:border-primary focus:outline-none" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition shadow-lg shadow-green-600/30 mt-2">Register Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-20 md:w-80 glass h-full flex flex-col transition-all duration-300 z-10">
+        <div class="h-40 flex items-center justify-center border-b border-gray-700 p-4">
+            <img src="" alt="Unyt Mart Logo" id="sidebar-logo" class="h-32 w-auto object-contain hidden md:block rounded">
+            <span class="md:hidden font-bold text-primary text-xl">UM</span>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-4 flex flex-col gap-2 px-2" id="nav-menu">
+            <button onclick="app.switchView('pos')" class="nav-btn active flex items-center p-3 rounded-lg hover:bg-gray-700 transition w-full text-left" data-target="pos">
+                <svg class="w-6 h-6 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <span class="hidden md:block">POS / Billing</span>
+            </button>
+            <button onclick="app.switchView('dashboard')" class="nav-btn flex items-center p-3 rounded-lg hover:bg-gray-700 transition w-full text-left" data-target="dashboard">
+                <svg class="w-6 h-6 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                <span class="hidden md:block">Dashboard</span>
+            </button>
+            <button onclick="app.switchView('products')" class="nav-btn flex items-center p-3 rounded-lg hover:bg-gray-700 transition w-full text-left" data-target="products">
+                <svg class="w-6 h-6 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                <span class="hidden md:block">Products</span>
+            </button>
+            <button onclick="app.switchView('history')" class="nav-btn flex items-center p-3 rounded-lg hover:bg-gray-700 transition w-full text-left" data-target="history">
+                <svg class="w-6 h-6 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="hidden md:block">Sales History</span>
+            </button>
+            <button onclick="app.switchView('finance')" class="nav-btn flex items-center p-3 rounded-lg hover:bg-gray-700 transition w-full text-left" data-target="finance">
+                <svg class="w-6 h-6 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span class="hidden md:block">Finance</span>
+            </button>
+            <button onclick="app.switchView('reports')" class="nav-btn flex items-center p-3 rounded-lg hover:bg-gray-700 transition w-full text-left" data-target="reports">
+                <svg class="w-6 h-6 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <span class="hidden md:block">Reports</span>
+            </button>
+            <button onclick="app.switchView('settings')" class="nav-btn flex items-center p-3 rounded-lg hover:bg-gray-700 transition w-full text-left" data-target="settings">
+                <svg class="w-6 h-6 md:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span class="hidden md:block">Settings</span>
+            </button>
+        </nav>
+        <div class="p-4 border-t border-gray-700 text-center text-xs text-gray-400">
+            <span class="hidden md:block">Unyt Mart POS v1.6</span>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col relative h-full overflow-hidden bg-gradient-to-br from-darkBg to-gray-900">
+        
+        <!-- Header -->
+        <header class="h-16 glass flex items-center justify-between px-6 z-10">
+            <h2 id="page-title" class="text-xl font-bold tracking-wider">POS / Billing</h2>
+            <div class="flex items-center gap-4">
+                <span id="header-datetime" class="text-sm text-gray-400 font-mono"></span>
+                <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-sm font-bold">UM</div>
+                <button onclick="app.logout()" class="px-3 py-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/40 rounded-lg text-xs font-bold transition">Logout</button>
+            </div>
+        </header>
+
+        <!-- Dynamic Views Container -->
+        <div id="views-container" class="flex-1 overflow-y-auto p-4 md:p-6 relative">
+            
+            <!-- VIEW: POS / BILLING -->
+            <div id="view-pos" class="view-section h-full flex flex-col md:flex-row gap-4">
+                <!-- Left: Product Grid & Search -->
+                <div class="flex-1 flex flex-col gap-4 h-full">
+                    <div class="glass p-3 rounded-xl flex gap-2">
+                        <div class="relative flex-1">
+                            <input type="text" id="pos-search" onkeyup="app.filterPosProducts()" placeholder="Search by name, SKU or scan Barcode..." class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-4 pl-10 focus:outline-none focus:border-primary text-gray-100" autocomplete="off">
+                            <svg class="w-5 h-5 absolute left-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <button onclick="app.clearPosSearch()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition">Clear</button>
+                    </div>
+                    <!-- Categories -->
+                    <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide" id="pos-categories">
+                        <!-- Populated by JS -->
+                    </div>
+                    <!-- Grid -->
+                    <div class="flex-1 overflow-y-auto pr-2">
+                        <div id="pos-product-grid" class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Cart -->
+                <div class="w-full md:w-96 glass rounded-xl flex flex-col h-full border border-gray-700 shadow-xl">
+                    <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+                        <h3 class="font-bold text-lg">Current Order</h3>
+                        <span id="cart-item-count" class="bg-primary text-xs px-2 py-1 rounded-full">0 items</span>
+                    </div>
+                    
+                    <!-- Cart Items -->
+                    <div class="flex-1 overflow-y-auto p-2 flex flex-col gap-2" id="cart-items-container">
+                        <div class="h-full flex items-center justify-center text-gray-500 flex-col" id="cart-empty-state">
+                            <svg class="w-12 h-12 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            <p>Cart is empty</p>
+                        </div>
+                    </div>
+
+                    <!-- Cart Totals & Actions -->
+                    <div class="p-4 bg-gray-800 rounded-b-xl border-t border-gray-700">
+                        <div class="flex justify-between text-sm mb-1 text-gray-400">
+                            <span>Subtotal</span>
+                            <span id="cart-subtotal">0.00</span>
+                        </div>
+                        <div class="flex justify-between text-sm mb-1 text-gray-400">
+                            <span>Tax (<span id="cart-tax-rate">0</span>%)</span>
+                            <span id="cart-tax">0.00</span>
+                        </div>
+                        <!-- Delivery Charge Panel -->
+                        <div class="mb-2 p-2 bg-gray-900 rounded-lg border border-gray-700">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm text-emerald-400 font-semibold">Delivery Fee</span>
+                                <input type="number" id="cart-delivery" class="w-28 bg-darkBg border border-emerald-600 rounded px-2 py-0.5 text-right text-emerald-400 font-bold" value="0" min="0" oninput="app.updateCartTotals()">
+                            </div>
+                            <div class="pl-1 mt-1 flex flex-col gap-1">
+                                <label class="flex items-center gap-2 cursor-pointer text-xs text-gray-400">
+                                    <input type="checkbox" id="cart-free-delivery" onchange="app.updateCartTotals()" class="w-3 h-3 rounded accent-primary">
+                                    Free Delivery (Waive fee)
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer text-xs text-gray-400">
+                                    <input type="checkbox" id="cart-show-delivery-sep" onchange="app.updateCartTotals()" class="w-3 h-3 rounded accent-primary">
+                                    Show delivery charge separately
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-sm mb-3 text-gray-400">
+                            <span>Discount</span>
+                            <input type="number" id="cart-discount" class="w-24 bg-gray-900 border border-gray-600 rounded px-2 py-0.5 text-right text-white" value="0" min="0" oninput="app.updateCartTotals()">
+                        </div>
+                        <div class="flex justify-between font-bold text-xl mb-4 text-green-400">
+                            <span>Total</span>
+                            <span id="cart-total">0.00</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <button onclick="app.cancelSale()" class="bg-red-500/20 text-red-400 hover:bg-red-500/40 py-3 rounded-lg font-bold transition">Cancel</button>
+                            <button onclick="app.showPaymentModal()" class="bg-primary hover:bg-primaryHover text-white py-3 rounded-lg font-bold transition shadow-lg shadow-blue-500/30">Process Order</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: DASHBOARD -->
+            <div id="view-dashboard" class="view-section hidden h-full overflow-y-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="glass p-6 rounded-xl border-l-4 border-blue-500">
+                        <p class="text-gray-400 text-sm">Today's Sales</p>
+                        <h3 class="text-3xl font-bold mt-1" id="dash-today-sales">0.00</h3>
+                    </div>
+                    <div class="glass p-6 rounded-xl border-l-4 border-green-500">
+                        <p class="text-gray-400 text-sm">Today's Profit</p>
+                        <h3 class="text-3xl font-bold mt-1" id="dash-today-profit">0.00</h3>
+                    </div>
+                    <div class="glass p-6 rounded-xl border-l-4 border-purple-500">
+                        <p class="text-gray-400 text-sm">Monthly Revenue</p>
+                        <h3 class="text-3xl font-bold mt-1" id="dash-monthly-rev">0.00</h3>
+                    </div>
+                    <div class="glass p-6 rounded-xl border-l-4 border-yellow-500">
+                        <p class="text-gray-400 text-sm">Total Orders (Today)</p>
+                        <h3 class="text-3xl font-bold mt-1" id="dash-today-orders">0</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass p-6 rounded-xl">
+                        <h3 class="font-bold text-lg mb-4 border-b border-gray-700 pb-2">Low Stock Alerts</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead><tr class="text-gray-400"><th>Product</th><th>Stock</th><th>Action</th></tr></thead>
+                                <tbody id="dash-low-stock"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="glass p-6 rounded-xl">
+                        <h3 class="font-bold text-lg mb-4 border-b border-gray-700 pb-2">Recent Courier Orders</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead><tr class="text-gray-400"><th>Inv #</th><th>Customer</th><th>Total</th></tr></thead>
+                                <tbody id="dash-recent-sales"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: PRODUCTS -->
+            <div id="view-products" class="view-section hidden h-full flex flex-col">
+                <div class="glass p-4 rounded-xl mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="relative w-full md:w-96">
+                        <input type="text" id="product-search-table" onkeyup="app.renderProductsTable()" placeholder="Search products..." class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-4 focus:outline-none focus:border-primary">
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="app.exportProducts()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm">Export</button>
+                        <button onclick="document.getElementById('import-file').click()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm">Import</button>
+                        <input type="file" id="import-file" class="hidden" accept=".json" onchange="app.importProducts(event)">
+                        <button onclick="app.showProductModal()" class="px-4 py-2 bg-primary hover:bg-primaryHover rounded-lg transition text-sm font-bold flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Add Product
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 glass rounded-xl overflow-hidden flex flex-col">
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-gray-800 sticky top-0">
+                                <tr>
+                                    <th class="p-4 font-semibold text-gray-300">Name</th>
+                                    <th class="p-4 font-semibold text-gray-300">SKU/Barcode</th>
+                                    <th class="p-4 font-semibold text-gray-300">Category</th>
+                                    <th class="p-4 font-semibold text-gray-300">Size</th>
+                                    <th class="p-4 font-semibold text-gray-300">Cost</th>
+                                    <th class="p-4 font-semibold text-gray-300">Price</th>
+                                    <th class="p-4 font-semibold text-gray-300">Stock</th>
+                                    <th class="p-4 font-semibold text-gray-300 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body" class="divide-y divide-gray-700">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: HISTORY -->
+            <div id="view-history" class="view-section hidden h-full flex flex-col">
+                <div class="glass p-4 rounded-xl mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <input type="date" id="history-date" onchange="app.renderHistoryTable()" class="bg-darkBg border border-gray-700 rounded-lg py-2 px-4 focus:outline-none text-white">
+                    <input type="text" id="history-search" onkeyup="app.renderHistoryTable()" placeholder="Search Invoice or Customer..." class="w-full md:w-64 bg-darkBg border border-gray-700 rounded-lg py-2 px-4 focus:outline-none">
+                </div>
+                <div class="flex-1 glass rounded-xl overflow-hidden flex flex-col">
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-gray-800 sticky top-0">
+                                <tr>
+                                    <th class="p-4 font-semibold">Invoice #</th>
+                                    <th class="p-4 font-semibold">Customer / Phone</th>
+                                    <th class="p-4 font-semibold">Date & Time</th>
+                                    <th class="p-4 font-semibold">Total</th>
+                                    <th class="p-4 font-semibold">Payment</th>
+                                    <th class="p-4 font-semibold text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body" class="divide-y divide-gray-700">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: FINANCE -->
+            <div id="view-finance" class="view-section hidden h-full flex flex-col">
+                <!-- Top Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="glass p-6 rounded-xl border-l-4 border-indigo-500">
+                        <p class="text-gray-400 text-sm">Gross Revenue</p>
+                        <h3 class="text-3xl font-bold mt-1 text-white" id="fin-gross-rev">0.00</h3>
+                    </div>
+                    <div class="glass p-6 rounded-xl border-l-4 border-pink-500">
+                        <p class="text-gray-400 text-sm">Total Delivery Fees</p>
+                        <h3 class="text-3xl font-bold mt-1 text-white" id="fin-total-del">0.00</h3>
+                    </div>
+                    <div class="glass p-6 rounded-xl border-l-4 border-emerald-500">
+                        <p class="text-gray-400 text-sm">Net Revenue (Gross - Delivery)</p>
+                        <h3 class="text-3xl font-bold mt-1 text-emerald-400" id="fin-net-rev">0.00</h3>
+                    </div>
+                </div>
+                
+                <!-- Filter & Search -->
+                <div class="glass p-4 rounded-xl mb-4 flex flex-col lg:flex-row justify-between items-center gap-4">
+                    <h3 class="font-bold text-lg">Financial Ledger</h3>
+                    <div class="flex flex-wrap gap-2 items-center w-full lg:w-auto">
+                        <div class="flex items-center gap-1 text-xs text-gray-400">
+                            <span>From:</span>
+                            <input type="date" id="finance-from-date" onchange="app.renderFinance()" class="bg-darkBg border border-gray-700 rounded-lg py-1.5 px-3 text-white text-sm">
+                        </div>
+                        <div class="flex items-center gap-1 text-xs text-gray-400">
+                            <span>To:</span>
+                            <input type="date" id="finance-to-date" onchange="app.renderFinance()" class="bg-darkBg border border-gray-700 rounded-lg py-1.5 px-3 text-white text-sm">
+                        </div>
+                        <input type="text" id="finance-search" onkeyup="app.renderFinance()" placeholder="Search Invoice..." class="bg-darkBg border border-gray-700 rounded-lg py-1.5 px-3 text-white text-sm w-36">
+                        <button onclick="app.printFinancialStatement()" class="px-4 py-2 bg-primary hover:bg-primaryHover rounded-lg text-white font-bold text-sm transition flex items-center gap-1 shadow-lg shadow-blue-500/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            Print Statement
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ledger Table -->
+                <div class="flex-1 glass rounded-xl overflow-hidden flex flex-col">
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-gray-800 sticky top-0">
+                                <tr>
+                                    <th class="p-4 font-semibold text-gray-300">Invoice #</th>
+                                    <th class="p-4 font-semibold text-gray-300">Date</th>
+                                    <th class="p-4 font-semibold text-gray-300 text-right">Subtotal</th>
+                                    <th class="p-4 font-semibold text-gray-300 text-right">Tax</th>
+                                    <th class="p-4 font-semibold text-gray-300 text-right">Discount</th>
+                                    <th class="p-4 font-semibold text-gray-300 text-right">Delivery Charge</th>
+                                    <th class="p-4 font-semibold text-gray-300 text-right">Gross Total</th>
+                                    <th class="p-4 font-semibold text-emerald-400 text-right">Net (Total - Delivery)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finance-table-body" class="divide-y divide-gray-700">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: REPORTS -->
+            <div id="view-reports" class="view-section hidden h-full overflow-y-auto">
+                <div class="glass p-6 rounded-xl mb-6 flex gap-4">
+                    <button class="px-4 py-2 bg-primary rounded-lg">All Time Summary</button>
+                </div>
+                <div class="glass p-6 rounded-xl mb-6">
+                    <h3 class="text-xl font-bold mb-4">Financial Summary</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="p-4 bg-gray-800 rounded-lg"><p class="text-gray-400">Total Revenue</p><h4 class="text-2xl font-bold" id="rep-rev">0.00</h4></div>
+                        <div class="p-4 bg-gray-800 rounded-lg"><p class="text-gray-400">Total Profit</p><h4 class="text-2xl font-bold text-green-400" id="rep-profit">0.00</h4></div>
+                        <div class="p-4 bg-gray-800 rounded-lg"><p class="text-gray-400">Total Transactions</p><h4 class="text-2xl font-bold" id="rep-trans">0</h4></div>
+                        <div class="p-4 bg-gray-800 rounded-lg"><p class="text-gray-400">Items Sold</p><h4 class="text-2xl font-bold" id="rep-items">0</h4></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SETTINGS -->
+            <div id="view-settings" class="view-section hidden h-full overflow-y-auto">
+                <div class="max-w-3xl mx-auto glass p-8 rounded-xl space-y-8">
+                    <div>
+                        <h3 class="text-2xl font-bold mb-6 border-b border-gray-700 pb-2">System Settings</h3>
+                        
+                        <form id="settings-form" class="space-y-6" onsubmit="app.saveSettings(event)">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Company Name</label>
+                                    <input type="text" id="set-company" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Phone / WhatsApp Number</label>
+                                    <input type="text" id="set-phone" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm text-gray-400 mb-1">Address</label>
+                                    <input type="text" id="set-address" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm text-gray-400 mb-1">Logo URL (Base64 or Link)</label>
+                                    <input type="text" id="set-logo" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Currency Symbol</label>
+                                    <input type="text" id="set-currency" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Default Delivery Fee</label>
+                                    <input type="number" id="set-delivery" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white" min="0" step="1">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Tax Percentage (%)</label>
+                                    <input type="number" id="set-tax" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white" min="0" step="0.1">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Receipt Size</label>
+                                    <select id="set-receipt-size" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white">
+                                        <option value="58mm">58mm Thermal</option>
+                                        <option value="80mm">80mm Thermal</option>
+                                        <option value="a6">A6 Invoice (105x148mm)</option>
+                                        <option value="a5">A5 Invoice (148x210mm)</option>
+                                        <option value="100%">A4 / Full Page</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1">Invoice Prefix</label>
+                                    <input type="text" id="set-prefix" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm text-gray-400 mb-1">Receipt Footer Message</label>
+                                    <input type="text" id="set-footer" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white">
+                                </div>
+                                <div class="md:col-span-2 bg-gray-900 p-3 rounded-lg border border-gray-700 mt-2">
+                                    <label class="flex items-center gap-2 cursor-pointer text-sm text-white font-bold">
+                                        <input type="checkbox" id="set-print-merchant" class="w-4 h-4 rounded accent-primary">
+                                        Print Merchant Invoice (Dual Landscape Mode)
+                                    </label>
+                                    <p class="text-xs text-gray-400 mt-1 pl-6">Divides the page in half to print Customer & Merchant copies side-by-side.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="pt-4 border-t border-gray-700 flex justify-between">
+                                <button type="button" onclick="app.hardReset()" class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white font-bold transition">Factory Reset</button>
+                                <button type="submit" class="px-6 py-2 bg-primary hover:bg-primaryHover rounded-lg text-white font-bold transition shadow-lg shadow-blue-500/30">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Account & Security Section (Email & Password Change) -->
+                    <div class="pt-6 border-t border-gray-700">
+                        <h4 class="text-xl font-bold mb-4">Account & Security (Change Email & Password)</h4>
+                        <form id="account-form" onsubmit="app.updateAccount(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Current Email</label>
+                                <input type="email" id="acc-current-email" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white opacity-60 cursor-not-allowed" disabled>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">New Email Address</label>
+                                <input type="email" id="acc-new-email" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white" placeholder="Enter new email address">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Current Password <span class="text-red-400">*</span> (Required)</label>
+                                <input type="password" id="acc-current-password" required class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white" placeholder="••••••••">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">New Password (Leave blank to keep current)</label>
+                                <input type="password" id="acc-new-password" minlength="6" class="w-full bg-darkBg border border-gray-700 rounded-lg py-2 px-3 text-white" placeholder="••••••••">
+                            </div>
+                            <div class="flex justify-end pt-2">
+                                <button type="submit" class="px-6 py-2 bg-primary hover:bg-primaryHover rounded-lg text-white font-bold transition shadow-lg shadow-blue-500/30">Update Account Credentials</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODALS & OVERLAYS -->
+
+    <!-- Payment & Courier Modal -->
+    <div id="modal-payment" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-darkPanel border border-gray-700 rounded-xl p-6 w-full max-w-lg shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4 text-center">Dispatch & Payment Details</h2>
+            
+            <div class="bg-gray-900 p-4 rounded-lg mb-4 text-center">
+                <p class="text-gray-400 mb-1">Total Order Amount</p>
+                <h3 class="text-4xl font-bold text-green-400" id="pay-total-display">0.00</h3>
+            </div>
+
+            <!-- Customer Details for Delivery -->
+            <div class="space-y-3 mb-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Customer Name *</label>
+                    <input type="text" id="cust-name" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" placeholder="e.g. John Doe">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">WhatsApp Phone Number * (e.g. +94766802925 or 0766802925)</label>
+                    <input type="text" id="cust-phone" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" placeholder="+94766802925">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Delivery / Shipping Address *</label>
+                    <textarea id="cust-address" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white text-sm h-16" placeholder="Street address, City, District"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Payment Method</label>
+                        <select id="pay-method" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" onchange="app.updateCodDisplay()">
+                            <option value="COD">Cash on Delivery (COD)</option>
+                            <option value="Bank Transfer">Bank Transfer / Paid</option>
+                            <option value="Cash">Cash Store Pickup</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Courier / Tracking No.</label>
+                        <input type="text" id="cust-tracking" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white text-sm" placeholder="e.g. Prompt / Domex #">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">COD Amount</label>
+                    <input type="text" id="pay-cod-amount" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white text-sm font-bold text-emerald-400" readonly>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm text-gray-400 mb-2">Cash Received (If paid in cash)</label>
+                <input type="number" id="pay-cash" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-xl font-bold text-white text-center focus:outline-none focus:border-primary" placeholder="0.00" oninput="app.calculateChange()">
+            </div>
+            
+            <div class="mb-6 flex justify-between items-center bg-gray-900 p-3 rounded-lg border border-gray-700">
+                <span class="text-gray-400 text-sm">Balance / Change</span>
+                <span class="text-xl font-bold text-yellow-400" id="pay-change">0.00</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="app.closeModal('modal-payment')" class="py-3 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold transition">Cancel</button>
+                <button onclick="app.finalizeSale()" class="py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold transition shadow-lg shadow-green-600/30">Complete Order</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Product Modal -->
+    <div id="modal-product" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50">
+        <div class="bg-darkPanel border border-gray-700 rounded-xl p-6 w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            <h2 class="text-2xl font-bold mb-6 border-b border-gray-700 pb-2" id="prod-modal-title">Add New Product</h2>
+            
+            <form id="product-form" onsubmit="app.saveProduct(event)">
+                <input type="hidden" id="prod-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm text-gray-400 mb-1">Product Name *</label>
+                        <input type="text" id="prod-name" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white focus:border-primary" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Barcode / SKU</label>
+                        <input type="text" id="prod-sku" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Category</label>
+                        <input type="text" id="prod-cat" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white focus:border-primary" list="category-list">
+                        <datalist id="category-list"></datalist>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Size</label>
+                        <input type="text" id="prod-size" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white focus:border-primary" placeholder="e.g. S, M, L, XL, 42">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Buying Price (Cost) *</label>
+                        <input type="number" id="prod-cost" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white focus:border-primary" step="0.01" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Selling Price *</label>
+                        <input type="number" id="prod-price" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white focus:border-primary" step="0.01" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Current Stock *</label>
+                        <input type="number" id="prod-stock" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white focus:border-primary" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Low Stock Alert Level</label>
+                        <input type="number" id="prod-min-stock" class="w-full bg-darkBg border border-gray-600 rounded-lg py-2 px-3 text-white focus:border-primary" value="5">
+                    </div>
+                </div>
+                
+                <div class="flex justify-end gap-3 pt-4 border-t border-gray-700">
+                    <button type="button" onclick="app.closeModal('modal-product')" class="px-5 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold transition">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-primary hover:bg-primaryHover text-white rounded-lg font-bold transition">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Master Wrapper for Dual Copy -->
+    <div id="print-wrapper" class="hidden">
+        <!-- Left: Customer -->
+        <div id="receipt-print-area" class="receipt-content text-black bg-white">
+            <div class="print-copy-type" style="text-align: center; font-weight: bold; font-size: 1.1em; margin-bottom: 5px; text-decoration: underline; display: none;">CUSTOMER INVOICE</div>
+            
+            <!-- Header -->
+            <div class="print-header" style="text-align: center; margin-bottom: 12px;">
+                <img id="print-logo" src="" style="max-height: 50px; margin: 0 auto 6px auto; display: none;">
+                <h2 id="print-company" style="margin: 0; font-weight: bold; text-transform: uppercase;">Unyt Mart</h2>
+                <div id="print-address" style="line-height: 1.4; color: #111;"></div>
+                <div id="print-phone" style="color: #111;"></div>
+            </div>
+            
+            <div class="print-divider" style="border-top: 2px solid #000; margin: 10px 0;"></div>
+            
+            <!-- Invoice Details & Customer Info Grid -->
+            <div class="print-info-grid" style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                <div class="print-inv-details" style="line-height: 1.4;">
+                    <div><strong>Invoice #:</strong> <span id="print-inv"></span></div>
+                    <div><strong>Date:</strong> <span id="print-date"></span></div>
+                    <div><strong>Payment:</strong> <span id="print-paymethod"></span></div>
+                    
+                    <div id="print-barcode-area" style="margin-top: 15px; width: 150px; height: 50px; border: 2px dashed #000; border-radius: 12px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; color: #333; font-weight: bold; font-family: 'Helvetica Neue', Arial, sans-serif;">
+                        Place Courier Barcode Here
+                    </div>
+                </div>
+                
+                <div id="print-customer-box" style="text-align: right; line-height: 1.4;">
+                    <div style="font-weight: bold; text-decoration: underline; margin-bottom: 2px;">BILLED / DELIVERED TO:</div>
+                    <div id="print-cust-name" style="font-weight: bold;"></div>
+                    <div id="print-cust-phone"></div>
+                    <div id="print-cust-address"></div>
+                    <div id="print-cust-tracking"></div>
+                </div>
+            </div>
+
+            <!-- Items Table -->
+            <table class="print-table" style="width: 100%; text-align: left; border-collapse: collapse; margin-bottom: 12px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #000; background-color: #f8f9fa;">
+                        <th style="padding: 4px 2px;">Item Description</th>
+                        <th style="padding: 4px 2px; text-align: center; width: 40px;">Qty</th>
+                        <th style="padding: 4px 2px; text-align: right; width: 80px;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="print-items"></tbody>
+            </table>
+
+            <!-- Totals -->
+            <div class="print-totals" style="line-height: 1.5; width: 100%; max-width: 250px; margin-left: auto;">
+                <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span><span id="print-subtotal"></span></div>
+                <div id="print-delivery-row" style="display: flex; justify-content: space-between;"><span>Delivery Fee:</span><span id="print-delivery"></span></div>
+                <div style="display: flex; justify-content: space-between;"><span>Discount:</span><span id="print-discount"></span></div>
+                <div style="border-top: 2px solid #000; margin-top: 4px; padding-top: 4px; display: flex; justify-content: space-between; font-weight: bold;">
+                    <span>TOTAL:</span><span id="print-total"></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 6px; padding: 4px 6px; border: 1px solid #000; border-radius: 6px; font-size: 1.1em; font-weight: bold;">
+                    <span>COD Amount:</span><span id="print-cod-amount"></span>
+                </div>
+            </div>
+
+            <div class="print-divider" style="border-top: 1px dashed #000; margin: 15px 0 8px 0;"></div>
+            <div id="print-footer" style="text-align: center; font-weight: bold;">Thank you for shopping with Unyt Mart!</div>
+        </div>
+        
+        <!-- Right: Merchant -->
+        <div id="receipt-print-area-merchant" class="receipt-content text-black bg-white" style="display: none;"></div>
+    </div>
+
+    <!-- A4 PORTRAIT FINANCIAL STATEMENT PRINT WRAPPER -->
+    <div id="finance-print-wrapper" class="hidden">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img id="fin-print-logo" src="" style="max-height: 60px; margin: 0 auto 10px auto; display: block;">
+            <h2 id="fin-print-company" style="font-size: 22px; font-weight: bold; text-transform: uppercase; margin: 0;"></h2>
+            <div id="fin-print-address" style="font-size: 13px; color: #333; margin-top: 2px;"></div>
+            <div id="fin-print-phone" style="font-size: 13px; color: #333; margin-top: 2px;"></div>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0; border-bottom: 2px solid #000; padding-bottom: 12px;">
+            <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">PROFESSIONAL FINANCIAL STATEMENT</h3>
+            <p style="font-size: 13px; color: #555; margin: 0;">Period: <span id="fin-print-period" style="font-weight: bold;"></span></p>
+        </div>
+
+        <!-- Summary Metrics Box -->
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; border: 1px solid #333; padding: 12px; background: #f9f9f9; font-size: 12px;">
+            <div><strong>Gross Revenue:</strong> <span id="fin-print-gross"></span></div>
+            <div><strong>Total Delivery:</strong> <span id="fin-print-del"></span></div>
+            <div><strong>Net Revenue:</strong> <span id="fin-print-net"></span></div>
+            <div><strong>Est. Profit:</strong> <span id="fin-print-profit"></span></div>
+        </div>
+
+        <!-- Detailed Ledger Table -->
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px;">
+            <thead>
+                <tr style="border-bottom: 2px solid #000; background-color: #f1f1f1;">
+                    <th style="padding: 6px; text-align: left;">Invoice #</th>
+                    <th style="padding: 6px; text-align: left;">Date</th>
+                    <th style="padding: 6px; text-align: right;">Subtotal</th>
+                    <th style="padding: 6px; text-align: right;">Tax</th>
+                    <th style="padding: 6px; text-align: right;">Discount</th>
+                    <th style="padding: 6px; text-align: right;">Delivery</th>
+                    <th style="padding: 6px; text-align: right;">Gross Total</th>
+                    <th style="padding: 6px; text-align: right;">Net Total</th>
+                </tr>
+            </thead>
+            <tbody id="fin-print-table-body"></tbody>
+        </table>
+
+        <div style="margin-top: 40px; display: flex; justify-content: space-between; font-size: 11px; color: #333;">
+            <div>Generated on: <span id="fin-print-gentime"></span></div>
+            <div>Authorized Signature: ______________________</div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK & Firestore Real-time Sync Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
+        import { 
+            getAuth, 
+            signInWithEmailAndPassword, 
+            createUserWithEmailAndPassword, 
+            signOut, 
+            onAuthStateChanged, 
+            updateEmail, 
+            updatePassword, 
+            EmailAuthProvider, 
+            reauthenticateWithCredential 
+        } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyzmfj_azpVsTOUNHfGA19eHMV3x1yWhU",
+            authDomain: "unyt-mart-pos.firebaseapp.com",
+            projectId: "unyt-mart-pos",
+            storageBucket: "unyt-mart-pos.firebasestorage.app",
+            messagingSenderId: "229544384",
+            appId: "1:229544384:web:c07d1afbfd170676a0f825",
+            measurementId: "G-E46VPEB2T3"
+        };
+
+        const firebaseApp = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(firebaseApp);
+        const auth = getAuth(firebaseApp);
+        const db = getFirestore(firebaseApp);
+
+        // Expose Firebase tools globally for the app object
+        window.firebaseAuth = {
+            auth,
+            db,
+            doc,
+            setDoc,
+            getDoc,
+            onSnapshot,
+            signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged,
+            updateEmail,
+            updatePassword,
+            EmailAuthProvider,
+            reauthenticateWithCredential
+        };
+    </script>
+
+    <!-- Application Script -->
+    <script>
+        const app = {
+            products: [],
+            sales: [],
+            cart: [],
+            activeCategory: 'All',
+            isInitialized: false,
+            settings: {
+                company: 'Unyt Mart',
+                phone: '+94766802925',
+                address: 'Main Street, Store HQ',
+                logo: '',
+                currency: 'Rs.',
+                delivery: 350,
+                tax: 0,
+                receiptSize: '80mm',
+                prefix: 'UM-',
+                footer: 'Thank you for your order!',
+                dualPrint: false
+            },
+
+            init() {
+                // Listen to Firebase Cloud Authentication state changes across devices
+                window.firebaseAuth.onAuthStateChanged(window.firebaseAuth.auth, async (user) => {
+                    if (user) {
+                        document.getElementById('auth-overlay').classList.add('hidden');
+                        if (!this.isInitialized) {
+                            this.isInitialized = true;
+                            await this.loadFromCloud(user.uid);
+                            this.setupRealtimeSync(user.uid);
+                            this.setupClock();
+                            this.renderCategories();
+                            this.renderPosGrid();
+                            this.updateCartTotals();
+                            this.renderProductsTable();
+                            this.renderHistoryTable();
+                            this.initFinanceDates();
+                            this.renderFinance();
+                            this.renderDashboard();
+                            this.populateSettingsForm();
+                        }
+                    } else {
+                        document.getElementById('auth-overlay').classList.remove('hidden');
+                        document.getElementById('auth-overlay').classList.add('flex');
+                        this.isInitialized = false;
+                    }
+                });
+            },
+
+            switchAuthTab(tab) {
+                const loginBtn = document.getElementById('tab-login-btn');
+                const signupBtn = document.getElementById('tab-signup-btn');
+                const loginForm = document.getElementById('form-login');
+                const signupForm = document.getElementById('form-signup');
+                const subtitle = document.getElementById('auth-subtitle');
+
+                if (tab === 'login') {
+                    loginBtn.className = "flex-1 py-2 rounded-md font-bold text-sm bg-primary text-white transition";
+                    signupBtn.className = "flex-1 py-2 rounded-md font-bold text-sm text-gray-400 hover:text-white transition";
+                    loginForm.classList.remove('hidden');
+                    signupForm.classList.add('hidden');
+                    subtitle.textContent = "Sign in to access your system from any device";
+                } else {
+                    signupBtn.className = "flex-1 py-2 rounded-md font-bold text-sm bg-green-600 text-white transition";
+                    loginBtn.className = "flex-1 py-2 rounded-md font-bold text-sm text-gray-400 hover:text-white transition";
+                    signupForm.classList.remove('hidden');
+                    loginForm.classList.add('hidden');
+                    subtitle.textContent = "Create an account to register & login anywhere";
+                }
+            },
+
+            async handleLogin(e) {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value.trim();
+                const password = document.getElementById('login-password').value;
+
+                try {
+                    await window.firebaseAuth.signInWithEmailAndPassword(window.firebaseAuth.auth, email, password);
+                } catch (error) {
+                    alert("Login failed: " + error.message);
+                }
+            },
+
+            async handleSignup(e) {
+                e.preventDefault();
+                const email = document.getElementById('signup-email').value.trim();
+                const password = document.getElementById('signup-password').value;
+                const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+                if (password !== confirmPassword) {
+                    alert("Passwords do not match!");
+                    return;
+                }
+
+                try {
+                    await window.firebaseAuth.createUserWithEmailAndPassword(window.firebaseAuth.auth, email, password);
+                    alert("Account created successfully in the cloud!");
+                } catch (error) {
+                    alert("Signup failed: " + error.message);
+                }
+            },
+
+            async logout() {
+                try {
+                    await window.firebaseAuth.signOut(window.firebaseAuth.auth);
+                    location.reload();
+                } catch (error) {
+                    alert("Logout failed: " + error.message);
+                }
+            },
+
+            async updateAccount(e) {
+                e.preventDefault();
+                const user = window.firebaseAuth.auth.currentUser;
+                if (!user) {
+                    alert("No active session. Please log in again.");
+                    this.logout();
+                    return;
+                }
+
+                const newEmail = document.getElementById('acc-new-email').value.trim();
+                const currentPassword = document.getElementById('acc-current-password').value;
+                const newPassword = document.getElementById('acc-new-password').value;
+
+                try {
+                    const credential = window.firebaseAuth.EmailAuthProvider.credential(user.email, currentPassword);
+                    await window.firebaseAuth.reauthenticateWithCredential(user, credential);
+
+                    if (newEmail && newEmail !== user.email) {
+                        await window.firebaseAuth.updateEmail(user, newEmail);
+                    }
+
+                    if (newPassword) {
+                        if (newPassword.length < 6) {
+                            alert("New password must be at least 6 characters long.");
+                            return;
+                        }
+                        await window.firebaseAuth.updatePassword(user, newPassword);
+                    }
+
+                    alert("Account credentials updated successfully!");
+                    document.getElementById('acc-current-password').value = '';
+                    document.getElementById('acc-new-password').value = '';
+                    this.populateSettingsForm();
+                } catch (error) {
+                    alert("Update failed: " + error.message);
+                }
+            },
+
+            async loadFromCloud(uid) {
+                try {
+                    const docRef = window.firebaseAuth.doc(window.firebaseAuth.db, "pos_data", uid);
+                    const docSnap = await window.firebaseAuth.getDoc(docRef);
+
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        this.products = data.products || [];
+                        this.sales = data.sales || [];
+                        this.settings = { ...this.settings, ...(data.settings || {}) };
+                    } else {
+                        this.products = [
+                            { id: 1, name: 'Smart Watch Series 8', sku: 'SW-08', cat: 'Electronics', size: '-', cost: 3500, price: 5500, stock: 15, minStock: 3 },
+                            { id: 2, name: 'Bluetooth Earbuds', sku: 'BT-EB', cat: 'Electronics', size: '-', cost: 1200, price: 2400, stock: 25, minStock: 5 },
+                            { id: 3, name: 'Casual T-Shirt', sku: 'TS-M', cat: 'Apparel', size: 'M', cost: 800, price: 1500, stock: 40, minStock: 10 }
+                        ];
+                        this.sales = [];
+                        await this.syncToCloud();
+                    }
+                } catch (err) {
+                    console.error("Cloud load failed, using local fallback", err);
+                    this.loadFromStorageFallback();
+                }
+
+                if (this.settings.logo) {
+                    const el = document.getElementById('sidebar-logo');
+                    if (el) el.src = this.settings.logo;
+                }
+                document.getElementById('cart-delivery').value = this.settings.delivery || 0;
+            },
+
+            setupRealtimeSync(uid) {
+                const docRef = window.firebaseAuth.doc(window.firebaseAuth.db, "pos_data", uid);
+                window.firebaseAuth.onSnapshot(docRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        this.products = data.products || this.products;
+                        this.sales = data.sales || this.sales;
+                        this.settings = { ...this.settings, ...(data.settings || {}) };
+
+                        // Automatically refresh views in real-time when another device updates data
+                        this.renderCategories();
+                        this.renderPosGrid();
+                        this.renderProductsTable();
+                        this.renderHistoryTable();
+                        this.renderFinance();
+                        this.renderDashboard();
+                    }
+                });
+            },
+
+            async syncToCloud() {
+                const user = window.firebaseAuth.auth.currentUser;
+                if (!user) return;
+
+                // Local storage cache backup
+                localStorage.setItem('um_products', JSON.stringify(this.products));
+                localStorage.setItem('um_sales', JSON.stringify(this.sales));
+                localStorage.setItem('um_settings', JSON.stringify(this.settings));
+
+                try {
+                    const docRef = window.firebaseAuth.doc(window.firebaseAuth.db, "pos_data", user.uid);
+                    await window.firebaseAuth.setDoc(docRef, {
+                        products: this.products,
+                        sales: this.sales,
+                        settings: this.settings
+                    });
+                } catch (err) {
+                    console.error("Cloud sync failed", err);
+                }
+            },
+
+            loadFromStorageFallback() {
+                const p = localStorage.getItem('um_products');
+                const s = localStorage.getItem('um_sales');
+                const set = localStorage.getItem('um_settings');
+                if (p) this.products = JSON.parse(p);
+                if (s) this.sales = JSON.parse(s);
+                if (set) this.settings = { ...this.settings, ...JSON.parse(set) };
+            },
+
+            saveProducts() { this.syncToCloud(); },
+            saveSales() { this.syncToCloud(); },
+            saveSettingsToStorage() { this.syncToCloud(); },
+
+            setupClock() {
+                const update = () => {
+                    const el = document.getElementById('header-datetime');
+                    if (el) el.textContent = new Date().toLocaleString();
+                };
+                update();
+                setInterval(update, 1000);
+            },
+
+            switchView(viewName) {
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+                const target = document.getElementById('view-' + viewName);
+                if (target) target.classList.remove('hidden');
+
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    if (btn.dataset.target === viewName) {
+                        btn.classList.add('bg-gray-700', 'text-white');
+                    } else {
+                        btn.classList.remove('bg-gray-700', 'text-white');
+                    }
+                });
+
+                document.getElementById('page-title').textContent = viewName.toUpperCase();
+
+                if (viewName === 'dashboard') this.renderDashboard();
+                if (viewName === 'reports') this.renderReports();
+                if (viewName === 'finance') this.renderFinance();
+            },
+
+            // --- POS & CART SYSTEM ---
+            renderCategories() {
+                const cats = ['All', ...new Set(this.products.map(p => p.cat || 'General'))];
+                const container = document.getElementById('pos-categories');
+                container.innerHTML = cats.map(c => `
+                    <button onclick="app.setCategory('${c}')" class="px-4 py-1.5 rounded-lg text-sm whitespace-nowrap ${this.activeCategory === c ? 'bg-primary text-white font-bold' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}">
+                        ${c}
+                    </button>
+                `).join('');
+            },
+
+            setCategory(c) {
+                this.activeCategory = c;
+                this.renderCategories();
+                this.renderPosGrid();
+            },
+
+            filterPosProducts() { this.renderPosGrid(); },
+            clearPosSearch() {
+                document.getElementById('pos-search').value = '';
+                this.renderPosGrid();
+            },
+
+            renderPosGrid() {
+                const query = (document.getElementById('pos-search')?.value || '').toLowerCase();
+                const grid = document.getElementById('pos-product-grid');
+
+                const filtered = this.products.filter(p => {
+                    const matchCat = this.activeCategory === 'All' || p.cat === this.activeCategory;
+                    const matchQ = p.name.toLowerCase().includes(query) || (p.sku && p.sku.toLowerCase().includes(query));
+                    return matchCat && matchQ;
+                });
+
+                grid.innerHTML = filtered.map(p => `
+                    <div onclick="app.addToCart(${p.id})" class="glass p-4 rounded-xl cursor-pointer hover:border-primary transition flex flex-col justify-between group">
+                        <div>
+                            <div class="flex justify-between items-start">
+                                <span class="text-xs text-primary font-mono">${p.sku || 'NO-SKU'}</span>
+                                ${p.size ? `<span class="text-[10px] bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded border border-gray-700">Size: ${p.size}</span>` : ''}
+                            </div>
+                            <h4 class="font-bold text-gray-100 group-hover:text-primary transition line-clamp-2 mt-1">${p.name}</h4>
+                        </div>
+                        <div class="mt-4 flex justify-between items-center">
+                            <span class="font-bold text-emerald-400">${this.settings.currency} ${p.price.toFixed(2)}</span>
+                            <span class="text-xs ${p.stock <= p.minStock ? 'text-red-400 font-bold' : 'text-gray-400'}">Qty: ${p.stock}</span>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            addToCart(prodId) {
+                const prod = this.products.find(p => p.id === prodId);
+                if (!prod || prod.stock <= 0) {
+                    alert("Product out of stock!");
+                    return;
+                }
+
+                const existing = this.cart.find(c => c.id === prodId);
+                if (existing) {
+                    if (existing.qty < prod.stock) {
+                        existing.qty++;
+                    } else {
+                        alert("Cannot exceed available stock.");
+                    }
+                } else {
+                    this.cart.push({ ...prod, qty: 1 });
+                }
+                this.renderCart();
+            },
+
+            updateCartQty(prodId, delta) {
+                const item = this.cart.find(c => c.id === prodId);
+                if (!item) return;
+
+                const prod = this.products.find(p => p.id === prodId);
+                item.qty += delta;
+
+                if (item.qty <= 0) {
+                    this.cart = this.cart.filter(c => c.id !== prodId);
+                } else if (prod && item.qty > prod.stock) {
+                    item.qty = prod.stock;
+                    alert("Maximum stock limit reached.");
+                }
+                this.renderCart();
+            },
+
+            renderCart() {
+                const container = document.getElementById('cart-items-container');
+                const countEl = document.getElementById('cart-item-count');
+
+                const totalItems = this.cart.reduce((sum, item) => sum + item.qty, 0);
+                countEl.textContent = `${totalItems} items`;
+
+                if (this.cart.length === 0) {
+                    container.innerHTML = `
+                        <div class="h-full flex items-center justify-center text-gray-500 flex-col" id="cart-empty-state">
+                            <svg class="w-12 h-12 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            <p>Cart is empty</p>
+                        </div>`;
+                } else {
+                    container.innerHTML = this.cart.map(item => `
+                        <div class="bg-gray-900/60 p-3 rounded-lg flex justify-between items-center border border-gray-800">
+                            <div class="flex-1 pr-2">
+                                <h5 class="text-sm font-semibold truncate">${item.name} ${item.size ? `<span class="text-xs text-gray-400">(${item.size})</span>` : ''}</h5>
+                                <p class="text-xs text-emerald-400">${this.settings.currency} ${item.price.toFixed(2)}</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="app.updateCartQty(${item.id}, -1)" class="w-6 h-6 rounded bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-xs font-bold">-</button>
+                                <span class="text-sm font-mono">${item.qty}</span>
+                                <button onclick="app.updateCartQty(${item.id}, 1)" class="w-6 h-6 rounded bg-gray-700 hover:bg-gray-600 flex items-center justify-center text-xs font-bold">+</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                this.updateCartTotals();
+            },
+
+            updateCartTotals() {
+                const subtotal = this.cart.reduce((s, item) => s + (item.price * item.qty), 0);
+                const taxRate = parseFloat(this.settings.tax || 0);
+                const tax = (subtotal * taxRate) / 100;
+                
+                const isFreeDelivery = document.getElementById('cart-free-delivery')?.checked;
+                const rawDelivery = parseFloat(document.getElementById('cart-delivery')?.value || 0);
+                const delivery = isFreeDelivery ? 0 : rawDelivery;
+
+                const discount = parseFloat(document.getElementById('cart-discount')?.value || 0);
+
+                const total = Math.max(0, subtotal + tax + delivery - discount);
+
+                document.getElementById('cart-subtotal').textContent = `${this.settings.currency} ${subtotal.toFixed(2)}`;
+                if(document.getElementById('cart-tax-rate')) document.getElementById('cart-tax-rate').textContent = taxRate;
+                document.getElementById('cart-tax').textContent = `${this.settings.currency} ${tax.toFixed(2)}`;
+                document.getElementById('cart-total').textContent = `${this.settings.currency} ${total.toFixed(2)}`;
+            },
+
+            cancelSale() {
+                if (confirm("Are you sure you want to clear the cart?")) {
+                    this.cart = [];
+                    this.renderCart();
+                }
+            },
+
+            showPaymentModal() {
+                if (this.cart.length === 0) {
+                    alert("Cart is empty!");
+                    return;
+                }
+                const subtotal = this.cart.reduce((s, item) => s + (item.price * item.qty), 0);
+                const tax = (subtotal * parseFloat(this.settings.tax || 0)) / 100;
+                
+                const isFreeDelivery = document.getElementById('cart-free-delivery')?.checked;
+                const rawDelivery = parseFloat(document.getElementById('cart-delivery')?.value || 0);
+                const delivery = isFreeDelivery ? 0 : rawDelivery;
+                
+                const discount = parseFloat(document.getElementById('cart-discount')?.value || 0);
+                const total = Math.max(0, subtotal + tax + delivery - discount);
+
+                document.getElementById('pay-total-display').textContent = `${this.settings.currency} ${total.toFixed(2)}`;
+                document.getElementById('pay-cash').value = '';
+                document.getElementById('pay-change').textContent = '0.00';
+                
+                this.updateCodDisplay();
+
+                document.getElementById('modal-payment').classList.remove('hidden');
+                document.getElementById('modal-payment').classList.add('flex');
+            },
+
+            updateCodDisplay() {
+                const payMethod = document.getElementById('pay-method')?.value || 'COD';
+                const totalText = document.getElementById('pay-total-display')?.textContent.replace(/[^0-9.]/g, '') || '0';
+                const total = parseFloat(totalText) || 0;
+                const codInput = document.getElementById('pay-cod-amount');
+                if (!codInput) return;
+
+                if (payMethod === 'COD') {
+                    codInput.value = `${this.settings.currency} ${total.toFixed(2)}`;
+                } else {
+                    codInput.value = `0.00/=`;
+                }
+            },
+
+            calculateChange() {
+                const totalText = document.getElementById('pay-total-display').textContent.replace(/[^0-9.]/g, '');
+                const total = parseFloat(totalText) || 0;
+                const cash = parseFloat(document.getElementById('pay-cash').value) || 0;
+                const change = Math.max(0, cash - total);
+                document.getElementById('pay-change').textContent = `${this.settings.currency} ${change.toFixed(2)}`;
+            },
+
+            closeModal(modalId) {
+                const el = document.getElementById(modalId);
+                if (el) {
+                    el.classList.add('hidden');
+                    el.classList.remove('flex');
+                }
+            },
+
+            finalizeSale() {
+                const custName = document.getElementById('cust-name').value.trim();
+                const custPhone = document.getElementById('cust-phone').value.trim();
+                const custAddress = document.getElementById('cust-address').value.trim();
+                const payMethod = document.getElementById('pay-method').value;
+                const custTracking = document.getElementById('cust-tracking').value.trim();
+                const showDeliverySep = document.getElementById('cart-show-delivery-sep')?.checked || false;
+
+                const subtotal = this.cart.reduce((s, item) => s + (item.price * item.qty), 0);
+                const tax = (subtotal * parseFloat(this.settings.tax || 0)) / 100;
+                
+                const isFreeDelivery = document.getElementById('cart-free-delivery')?.checked;
+                const rawDelivery = parseFloat(document.getElementById('cart-delivery').value || 0);
+                const delivery = isFreeDelivery ? 0 : rawDelivery;
+
+                const discount = parseFloat(document.getElementById('cart-discount').value || 0);
+                const total = Math.max(0, subtotal + tax + delivery - discount);
+
+                const invNo = (this.settings.prefix || 'UM-') + Date.now().toString().slice(-6);
+
+                const codAmountVal = payMethod === 'COD' ? `${this.settings.currency} ${total.toFixed(2)}` : '0.00/=';
+
+                const saleRecord = {
+                    id: invNo,
+                    date: new Date().toISOString(),
+                    items: [...this.cart],
+                    subtotal,
+                    tax,
+                    delivery,         
+                    rawDelivery,      
+                    isFreeDelivery,   
+                    discount,
+                    total,
+                    showDeliverySep,
+                    customer: { name: custName, phone: custPhone, address: custAddress, tracking: custTracking },
+                    paymentMethod: payMethod,
+                    codAmount: codAmountVal
+                };
+
+                // Deduct stock
+                this.cart.forEach(cItem => {
+                    const p = this.products.find(prod => prod.id === cItem.id);
+                    if (p) p.stock -= cItem.qty;
+                });
+
+                this.sales.unshift(saleRecord);
+                this.saveProducts();
+                this.saveSales();
+
+                this.closeModal('modal-payment');
+                
+                if (custPhone) {
+                    if (confirm("Sale completed! Open WhatsApp Web to send receipt now?")) {
+                        this.sendWhatsAppReceipt(saleRecord);
+                    }
+                }
+
+                this.printReceipt(saleRecord);
+
+                // Reset Cart
+                this.cart = [];
+                document.getElementById('cust-name').value = '';
+                document.getElementById('cust-phone').value = '';
+                document.getElementById('cust-address').value = '';
+                document.getElementById('cust-tracking').value = '';
+                if (document.getElementById('cart-show-delivery-sep')) {
+                    document.getElementById('cart-show-delivery-sep').checked = false;
+                }
+                if (document.getElementById('cart-free-delivery')) {
+                    document.getElementById('cart-free-delivery').checked = false;
+                }
+                this.renderCart();
+                this.renderPosGrid();
+                this.renderProductsTable();
+                this.renderHistoryTable();
+                this.renderFinance();
+            },
+
+            // --- DIRECT WHATSAPP WEB INTEGRATION ---
+            sendWhatsAppReceipt(sale) {
+                let rawPhone = sale.customer?.phone || "";
+                let cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+
+                if (cleanPhone.startsWith('0')) {
+                    cleanPhone = '94' + cleanPhone.substring(1);
+                } else if (cleanPhone.length === 9) {
+                    cleanPhone = '94' + cleanPhone;
+                }
+
+                if (!cleanPhone) {
+                    alert("Please provide a valid phone number with country code.");
+                    return;
+                }
+
+                let msg = `*--- ${this.settings.company.toUpperCase()} RECEIPT ---*\n`;
+                msg += `Invoice #: ${sale.id}\n`;
+                msg += `Date: ${new Date(sale.date).toLocaleString()}\n\n`;
+                if (sale.customer?.name) msg += `Customer: ${sale.customer.name}\n`;
+                if (sale.customer?.address) msg += `Address: ${sale.customer.address}\n`;
+                if (sale.customer?.tracking) msg += `Courier Ref: ${sale.customer.tracking}\n`;
+                msg += `------------------------------\n`;
+
+                sale.items.forEach(i => {
+                    const itemSizeStr = i.size ? ` (${i.size})` : '';
+                    msg += `${i.name}${itemSizeStr} x ${i.qty} = ${this.settings.currency} ${(i.price * i.qty).toFixed(2)}\n`;
+                });
+
+                msg += `------------------------------\n`;
+                msg += `Subtotal: ${this.settings.currency} ${sale.subtotal.toFixed(2)}\n`;
+                
+                let deliveryText = "";
+                if (sale.showDeliverySep && sale.delivery > 0) {
+                    deliveryText = `Delivery Fee: ${this.settings.currency} ${sale.delivery.toFixed(2)}\n`;
+                }
+                msg += deliveryText;
+
+                if (sale.discount > 0) msg += `Discount: ${this.settings.currency} ${sale.discount.toFixed(2)}\n`;
+                msg += `TOTAL AMOUNT: ${this.settings.currency} ${sale.total.toFixed(2)}\n`;
+                
+                const codVal = sale.codAmount || (sale.paymentMethod === 'COD' ? `${this.settings.currency} ${sale.total.toFixed(2)}` : '0.00/=');
+                msg += `\n`;
+
+                msg += `*COD AMOUNT: ${codVal}*\n`;
+
+                msg += `\n`;
+
+                msg += `Payment Status: ${sale.paymentMethod}\n\n`;
+                msg += `${this.settings.footer || 'Thank you for your order!'}`;
+
+                const message = encodeURIComponent(msg);
+                window.location.href = `whatsapp://send?phone=${cleanPhone}&text=${message}`;
+            },
+
+            // --- PRINTING RECEIPT LOGIC ---
+            printReceipt(sale) {
+                // Populate Details
+                document.getElementById('print-company').textContent = this.settings.company;
+                document.getElementById('print-address').textContent = this.settings.address;
+                document.getElementById('print-phone').textContent = "Tel: " + this.settings.phone;
+
+                document.getElementById('print-cust-name').textContent = sale.customer?.name ? "Name: " + sale.customer.name : '';
+                document.getElementById('print-cust-phone').textContent = sale.customer?.phone ? "Phone: " + sale.customer.phone : '';
+                document.getElementById('print-cust-address').textContent = sale.customer?.address ? "Address: " + sale.customer.address : '';
+                document.getElementById('print-cust-tracking').textContent = sale.customer?.tracking ? "Tracking: " + sale.customer.tracking : '';
+
+                document.getElementById('print-inv').textContent = sale.id;
+                document.getElementById('print-date').textContent = new Date(sale.date).toLocaleDateString();
+                document.getElementById('print-paymethod').textContent = sale.paymentMethod;
+
+                const itemsBody = document.getElementById('print-items');
+                itemsBody.innerHTML = sale.items.map(i => `
+                    <tr>
+                        <td style="padding: 4px 2px;">${i.name} ${i.size ? `<span style="font-size: 0.75em; color: #555;">[${i.size}]</span>` : ''}</td>
+                        <td style="padding: 4px 2px; text-align: center;">${i.qty}</td>
+                        <td style="padding: 4px 2px; text-align: right;">${(i.price * i.qty).toFixed(2)}</td>
+                    </tr>
+                `).join('');
+
+                const deliveryRow = document.getElementById('print-delivery-row');
+                if (deliveryRow) {
+                    if (sale.showDeliverySep && sale.delivery > 0) {
+                        deliveryRow.style.display = 'flex';
+                        document.getElementById('print-delivery').textContent = `${this.settings.currency} ${sale.delivery.toFixed(2)}`;
+                    } else {
+                        deliveryRow.style.display = 'none';
+                    }
+                }
+
+                document.getElementById('print-subtotal').textContent = `${this.settings.currency} ${sale.subtotal.toFixed(2)}`;
+                document.getElementById('print-discount').textContent = `${this.settings.currency} ${sale.discount.toFixed(2)}`;
+                document.getElementById('print-total').textContent = `${this.settings.currency} ${sale.total.toFixed(2)}`;
+                
+                const codVal = sale.codAmount || (sale.paymentMethod === 'COD' ? `${this.settings.currency} ${sale.total.toFixed(2)}` : '0.00/=');
+                document.getElementById('print-cod-amount').textContent = codVal;
+
+                document.getElementById('print-footer').textContent = this.settings.footer;
+
+                const printWrapper = document.getElementById('print-wrapper');
+                const customerArea = document.getElementById('receipt-print-area');
+                const merchantArea = document.getElementById('receipt-print-area-merchant');
+
+                customerArea.className = 'receipt-content text-black bg-white';
+                if (this.settings.receiptSize === 'a6') {
+                    customerArea.classList.add('a6-size');
+                } else if (this.settings.receiptSize === 'a5') {
+                    customerArea.classList.add('a5-size');
+                } else if (this.settings.receiptSize === '100%') {
+                    customerArea.classList.add('a4-size');
+                } else {
+                    customerArea.classList.add('thermal-size');
+                    customerArea.style.setProperty('--receipt-width', this.settings.receiptSize);
+                }
+
+                const isDual = this.settings.dualPrint === true;
+                
+                const copyTypeLabel = customerArea.querySelector('.print-copy-type');
+                if (copyTypeLabel) {
+                    copyTypeLabel.style.display = isDual ? 'block' : 'none';
+                    copyTypeLabel.textContent = "CUSTOMER INVOICE";
+                }
+
+                if (isDual) {
+                    merchantArea.innerHTML = customerArea.innerHTML;
+                    merchantArea.className = customerArea.className; 
+                    
+                    const merchantCopyLabel = merchantArea.querySelector('.print-copy-type');
+                    if (merchantCopyLabel) merchantCopyLabel.textContent = "MERCHANT INVOICE";
+                    
+                    merchantArea.style.display = 'block';
+                    printWrapper.classList.add('dual-print-mode');
+                    
+                    let style = document.getElementById('dynamic-print-style');
+                    if (!style) {
+                        style = document.createElement('style');
+                        style.id = 'dynamic-print-style';
+                        document.head.appendChild(style);
+                    }
+                    style.innerHTML = `@page { size: landscape; margin: 0; }`;
+                } else {
+                    merchantArea.innerHTML = '';
+                    merchantArea.style.display = 'none';
+                    printWrapper.classList.remove('dual-print-mode');
+                    
+                    let style = document.getElementById('dynamic-print-style');
+                    if (style) style.innerHTML = '';
+                }
+
+                window.print();
+            },
+
+            // --- PRODUCTS MANAGEMENT ---
+            renderProductsTable() {
+                const query = (document.getElementById('product-search-table')?.value || '').toLowerCase();
+                const tbody = document.getElementById('products-table-body');
+
+                const filtered = this.products.filter(p => p.name.toLowerCase().includes(query) || (p.sku && p.sku.toLowerCase().includes(query)));
+
+                tbody.innerHTML = filtered.map(p => `
+                    <tr class="hover:bg-gray-800/50">
+                        <td class="p-4 font-bold">${p.name}</td>
+                        <td class="p-4 text-gray-400 font-mono">${p.sku || '-'}</td>
+                        <td class="p-4 text-gray-400">${p.cat || 'General'}</td>
+                        <td class="p-4 text-gray-400">${p.size || '-'}</td>
+                        <td class="p-4">${this.settings.currency} ${p.cost.toFixed(2)}</td>
+                        <td class="p-4 text-emerald-400 font-bold">${this.settings.currency} ${p.price.toFixed(2)}</td>
+                        <td class="p-4 ${p.stock <= p.minStock ? 'text-red-400 font-bold' : ''}">${p.stock}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="app.editProduct(${p.id})" class="px-3 py-1 bg-blue-600/30 text-blue-400 rounded hover:bg-blue-600/50 mr-2">Edit</button>
+                            <button onclick="app.deleteProduct(${p.id})" class="px-3 py-1 bg-red-600/30 text-red-400 rounded hover:bg-red-600/50">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+
+            showProductModal(p = null) {
+                document.getElementById('prod-modal-title').textContent = p ? "Edit Product" : "Add New Product";
+                document.getElementById('prod-id').value = p ? p.id : '';
+                document.getElementById('prod-name').value = p ? p.name : '';
+                document.getElementById('prod-sku').value = p ? p.sku : '';
+                document.getElementById('prod-cat').value = p ? p.cat : '';
+                document.getElementById('prod-size').value = p ? (p.size || '') : '';
+                document.getElementById('prod-cost').value = p ? p.cost : '';
+                document.getElementById('prod-price').value = p ? p.price : '';
+                document.getElementById('prod-stock').value = p ? p.stock : '';
+                document.getElementById('prod-min-stock').value = p ? (p.minStock || 5) : 5;
+
+                document.getElementById('modal-product').classList.remove('hidden');
+                document.getElementById('modal-product').classList.add('flex');
+            },
+
+            editProduct(id) {
+                const p = this.products.find(item => item.id === id);
+                if (p) this.showProductModal(p);
+            },
+
+            deleteProduct(id) {
+                if (confirm("Are you sure you want to delete this product?")) {
+                    this.products = this.products.filter(p => p.id !== id);
+                    this.saveProducts();
+                    this.renderProductsTable();
+                    this.renderPosGrid();
+                }
+            },
+
+            saveProduct(e) {
+                e.preventDefault();
+                const id = document.getElementById('prod-id').value;
+                const name = document.getElementById('prod-name').value.trim();
+                const sku = document.getElementById('prod-sku').value.trim();
+                const cat = document.getElementById('prod-cat').value.trim();
+                const size = document.getElementById('prod-size').value.trim();
+                const cost = parseFloat(document.getElementById('prod-cost').value) || 0;
+                const price = parseFloat(document.getElementById('prod-price').value) || 0;
+                const stock = parseInt(document.getElementById('prod-stock').value) || 0;
+                const minStock = parseInt(document.getElementById('prod-min-stock').value) || 5;
+
+                if (id) {
+                    const idx = this.products.findIndex(p => p.id == id);
+                    if (idx !== -1) {
+                        this.products[idx] = { id: parseInt(id), name, sku, cat, size, cost, price, stock, minStock };
+                    }
+                } else {
+                    const newId = Date.now();
+                    this.products.push({ id: newId, name, sku, cat, size, cost, price, stock, minStock });
+                }
+
+                this.saveProducts();
+                this.closeModal('modal-product');
+                this.renderProductsTable();
+                this.renderPosGrid();
+                this.renderCategories();
+            },
+
+            // --- HISTORY MANAGEMENT ---
+            renderHistoryTable() {
+                const query = (document.getElementById('history-search')?.value || '').toLowerCase();
+                const tbody = document.getElementById('history-table-body');
+
+                const filtered = this.sales.filter(s => {
+                    const mInv = s.id.toLowerCase().includes(query);
+                    const mCust = s.customer && (s.customer.name.toLowerCase().includes(query) || s.customer.phone.includes(query));
+                    return mInv || mCust;
+                });
+
+                tbody.innerHTML = filtered.map(s => `
+                    <tr class="hover:bg-gray-800/50">
+                        <td class="p-4 font-mono text-primary font-bold">${s.id}</td>
+                        <td class="p-4">${s.customer?.name || 'Walk-in'} <span class="text-xs text-gray-400 block">${s.customer?.phone || ''}</span></td>
+                        <td class="p-4 text-xs text-gray-400">${new Date(s.date).toLocaleString()}</td>
+                        <td class="p-4 font-bold text-green-400">${this.settings.currency} ${s.total.toFixed(2)}</td>
+                        <td class="p-4"><span class="px-2 py-1 bg-gray-700 text-xs rounded">${s.paymentMethod}</span></td>
+                        <td class="p-4 text-center flex justify-center gap-2">
+                            <button onclick="app.editSale('${s.id}')" class="px-3 py-1 bg-yellow-600/30 text-yellow-400 hover:bg-yellow-600/50 rounded text-xs">Edit</button>
+                            <button onclick="app.deleteSale('${s.id}')" class="px-3 py-1 bg-red-600/30 text-red-400 hover:bg-red-600/50 rounded text-xs">Delete</button>
+                            <button onclick="app.sendWhatsAppReceipt(app.sales.find(x=>x.id==='${s.id}'))" class="px-3 py-1 bg-emerald-600/30 text-emerald-400 hover:bg-emerald-600/50 rounded text-xs flex items-center gap-1">WhatsApp Web</button>
+                            <button onclick="app.printReceipt(app.sales.find(x=>x.id==='${s.id}'))" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs">Print</button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+
+            deleteSale(id) {
+                if (confirm(`Are you sure you want to delete order ${id}? Stock will be restored.`)) {
+                    const saleIdx = this.sales.findIndex(s => s.id === id);
+                    if (saleIdx !== -1) {
+                        const sale = this.sales[saleIdx];
+                        sale.items.forEach(cItem => {
+                            const p = this.products.find(prod => prod.id === cItem.id);
+                            if (p) p.stock += cItem.qty;
+                        });
+                        this.sales.splice(saleIdx, 1);
+                        this.saveSales();
+                        this.saveProducts();
+                        this.renderHistoryTable();
+                        this.renderFinance();
+                        this.renderDashboard();
+                        this.renderProductsTable();
+                        this.renderPosGrid();
+                    }
+                }
+            },
+
+            editSale(id) {
+                const sale = this.sales.find(s => s.id === id);
+                if (!sale) return;
+
+                if (confirm(`Do you want to edit order ${id}? This will load the items back into the cart and remove the old record.`)) {
+                    sale.items.forEach(cItem => {
+                        const p = this.products.find(prod => prod.id === cItem.id);
+                        if (p) p.stock += cItem.qty;
+                    });
+
+                    this.cart = JSON.parse(JSON.stringify(sale.items));
+
+                    if (sale.customer) {
+                        if(document.getElementById('cust-name')) document.getElementById('cust-name').value = sale.customer.name || '';
+                        if(document.getElementById('cust-phone')) document.getElementById('cust-phone').value = sale.customer.phone || '';
+                        if(document.getElementById('cust-address')) document.getElementById('cust-address').value = sale.customer.address || '';
+                        if(document.getElementById('cust-tracking')) document.getElementById('cust-tracking').value = sale.customer.tracking || '';
+                    }
+                    if(document.getElementById('cart-delivery')) document.getElementById('cart-delivery').value = sale.rawDelivery !== undefined ? sale.rawDelivery : (sale.delivery || 0);
+                    if(document.getElementById('cart-free-delivery')) document.getElementById('cart-free-delivery').checked = sale.isFreeDelivery || false;
+                    if(document.getElementById('cart-show-delivery-sep')) document.getElementById('cart-show-delivery-sep').checked = sale.showDeliverySep || false;
+                    if(document.getElementById('cart-discount')) document.getElementById('cart-discount').value = sale.discount || 0;
+                    if(document.getElementById('pay-method') && sale.paymentMethod) document.getElementById('pay-method').value = sale.paymentMethod;
+
+                    this.sales = this.sales.filter(s => s.id !== id);
+
+                    this.saveSales();
+                    this.saveProducts();
+                    this.renderHistoryTable();
+                    this.renderFinance();
+                    this.renderDashboard();
+                    this.renderProductsTable();
+                    this.renderCart();
+                    this.renderPosGrid();
+
+                    this.switchView('pos');
+                }
+            },
+
+            // --- FINANCE MANAGEMENT ---
+            initFinanceDates() {
+                const fromEl = document.getElementById('finance-from-date');
+                const toEl = document.getElementById('finance-to-date');
+                if (fromEl && toEl && !fromEl.value) {
+                    const now = new Date();
+                    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                    fromEl.value = firstDay.toISOString().split('T')[0];
+                    toEl.value = now.toISOString().split('T')[0];
+                }
+            },
+
+            renderFinance() {
+                const query = (document.getElementById('finance-search')?.value || '').toLowerCase();
+                const fromDate = document.getElementById('finance-from-date')?.value;
+                const toDate = document.getElementById('finance-to-date')?.value;
+                const tbody = document.getElementById('finance-table-body');
+
+                let filteredSales = this.sales;
+
+                if (query) {
+                    filteredSales = filteredSales.filter(s => s.id.toLowerCase().includes(query));
+                }
+                
+                if (fromDate) {
+                    filteredSales = filteredSales.filter(s => new Date(s.date) >= new Date(fromDate));
+                }
+                if (toDate) {
+                    const endD = new Date(toDate);
+                    endD.setHours(23, 59, 59, 999);
+                    filteredSales = filteredSales.filter(s => new Date(s.date) <= endD);
+                }
+
+                let grossRev = 0;
+                let totalDel = 0;
+                let netRev = 0;
+
+                tbody.innerHTML = filteredSales.map(s => {
+                    const isFree = s.isFreeDelivery || false;
+                    const deliveryCharge = s.rawDelivery !== undefined ? s.rawDelivery : (s.delivery > 0 ? s.delivery : (this.settings.delivery || 0));
+                    const grossTotal = s.total || 0;
+                    
+                    const netTotal = grossTotal - deliveryCharge;
+
+                    grossRev += grossTotal;
+                    totalDel += deliveryCharge;
+                    netRev += netTotal;
+
+                    return `
+                        <tr class="hover:bg-gray-800/50">
+                            <td class="p-4 font-mono font-bold">${s.id}</td>
+                            <td class="p-4 text-gray-400">${new Date(s.date).toLocaleDateString()}</td>
+                            <td class="p-4 text-right">${this.settings.currency} ${s.subtotal.toFixed(2)}</td>
+                            <td class="p-4 text-right">${this.settings.currency} ${(s.tax || 0).toFixed(2)}</td>
+                            <td class="p-4 text-right text-red-400">${this.settings.currency} ${(s.discount || 0).toFixed(2)}</td>
+                            <td class="p-4 text-right text-yellow-400">
+                                ${this.settings.currency} ${deliveryCharge.toFixed(2)} 
+                                ${isFree ? '<span class="text-[10px] text-pink-400 block">(Free Delivery)</span>' : ''}
+                            </td>
+                            <td class="p-4 text-right font-bold text-white">${this.settings.currency} ${grossTotal.toFixed(2)}</td>
+                            <td class="p-4 text-right font-bold text-emerald-400 bg-emerald-900/10">${this.settings.currency} ${netTotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                }).join('') || `<tr><td colspan="8" class="p-4 text-center text-gray-500">No financial records found for the selected period.</td></tr>`;
+
+                if(document.getElementById('fin-gross-rev')) {
+                    document.getElementById('fin-gross-rev').textContent = `${this.settings.currency} ${grossRev.toFixed(2)}`;
+                    document.getElementById('fin-total-del').textContent = `${this.settings.currency} ${totalDel.toFixed(2)}`;
+                    document.getElementById('fin-net-rev').textContent = `${this.settings.currency} ${netRev.toFixed(2)}`;
+                }
+            },
+
+            printFinancialStatement() {
+                const fromDate = document.getElementById('finance-from-date')?.value;
+                const toDate = document.getElementById('finance-to-date')?.value;
+                const query = (document.getElementById('finance-search')?.value || '').toLowerCase();
+
+                let filteredSales = this.sales;
+                if (query) {
+                    filteredSales = filteredSales.filter(s => s.id.toLowerCase().includes(query));
+                }
+                if (fromDate) {
+                    filteredSales = filteredSales.filter(s => new Date(s.date) >= new Date(fromDate));
+                }
+                if (toDate) {
+                    const endD = new Date(toDate);
+                    endD.setHours(23, 59, 59, 999);
+                    filteredSales = filteredSales.filter(s => new Date(s.date) <= endD);
+                }
+
+                const logoImg = document.getElementById('fin-print-logo');
+                if (this.settings.logo) {
+                    logoImg.src = this.settings.logo;
+                    logoImg.style.display = 'block';
+                } else {
+                    logoImg.style.display = 'none';
+                }
+
+                document.getElementById('fin-print-company').textContent = this.settings.company;
+                document.getElementById('fin-print-address').textContent = this.settings.address;
+                document.getElementById('fin-print-phone').textContent = "Tel: " + this.settings.phone;
+                document.getElementById('fin-print-period').textContent = `${fromDate || 'Beginning'} to ${toDate || 'Present'}`;
+
+                let grossRev = 0;
+                let totalDel = 0;
+                let netRev = 0;
+                let totalCost = 0;
+
+                const tbody = document.getElementById('fin-print-table-body');
+                tbody.innerHTML = filteredSales.map(s => {
+                    const deliveryCharge = s.rawDelivery !== undefined ? s.rawDelivery : (s.delivery > 0 ? s.delivery : (this.settings.delivery || 0));
+                    const grossTotal = s.total || 0;
+                    const netTotal = grossTotal - deliveryCharge;
+
+                    grossRev += grossTotal;
+                    totalDel += deliveryCharge;
+                    netRev += netTotal;
+
+                    s.items.forEach(i => {
+                        totalCost += (i.cost || 0) * i.qty;
+                    });
+
+                    return `
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <td style="padding: 6px; font-family: monospace;">${s.id}</td>
+                            <td style="padding: 6px;">${new Date(s.date).toLocaleDateString()}</td>
+                            <td style="padding: 6px; text-align: right;">${this.settings.currency} ${s.subtotal.toFixed(2)}</td>
+                            <td style="padding: 6px; text-align: right;">${this.settings.currency} ${(s.tax || 0).toFixed(2)}</td>
+                            <td style="padding: 6px; text-align: right;">${this.settings.currency} ${(s.discount || 0).toFixed(2)}</td>
+                            <td style="padding: 6px; text-align: right;">${this.settings.currency} ${deliveryCharge.toFixed(2)}</td>
+                            <td style="padding: 6px; text-align: right; font-weight: bold;">${this.settings.currency} ${grossTotal.toFixed(2)}</td>
+                            <td style="padding: 6px; text-align: right; font-weight: bold;">${this.settings.currency} ${netTotal.toFixed(2)}</td>
+                        </tr>
+                    `;
+                }).join('') || `<tr><td colspan="8" style="padding: 10px; text-align: center;">No financial records found for the selected period.</td></tr>`;
+
+                const estProfit = netRev - totalCost;
+
+                document.getElementById('fin-print-gross').textContent = `${this.settings.currency} ${grossRev.toFixed(2)}`;
+                document.getElementById('fin-print-del').textContent = `${this.settings.currency} ${totalDel.toFixed(2)}`;
+                document.getElementById('fin-print-net').textContent = `${this.settings.currency} ${netRev.toFixed(2)}`;
+                document.getElementById('fin-print-profit').textContent = `${this.settings.currency} ${estProfit.toFixed(2)}`;
+                document.getElementById('fin-print-gentime').textContent = new Date().toLocaleString();
+
+                document.body.classList.add('printing-finance');
+                window.print();
+                document.body.classList.remove('printing-finance');
+            },
+
+            calculateProfitForSales(salesList) {
+                let netRev = 0;
+                let totalItemCost = 0;
+
+                salesList.forEach(s => {
+                    const deliveryCharge = s.rawDelivery !== undefined ? s.rawDelivery : (s.delivery > 0 ? s.delivery : (this.settings.delivery || 0));
+                    const netTotal = (s.total || 0) - deliveryCharge;
+                    netRev += netTotal;
+
+                    s.items.forEach(item => {
+                        totalItemCost += (item.cost || 0) * item.qty;
+                    });
+                });
+
+                return netRev - totalItemCost;
+            },
+
+            renderDashboard() {
+                const today = new Date().toDateString();
+                const todaySales = this.sales.filter(s => new Date(s.date).toDateString() === today);
+
+                const totalSalesToday = todaySales.reduce((acc, s) => acc + s.total, 0);
+                const totalOrdersToday = todaySales.length;
+
+                const totalProfitToday = this.calculateProfitForSales(todaySales);
+
+                document.getElementById('dash-today-sales').textContent = `${this.settings.currency} ${totalSalesToday.toFixed(2)}`;
+                document.getElementById('dash-today-profit').textContent = `${this.settings.currency} ${totalProfitToday.toFixed(2)}`;
+                document.getElementById('dash-today-orders').textContent = totalOrdersToday;
+
+                const lowStockList = this.products.filter(p => p.stock <= p.minStock);
+                document.getElementById('dash-low-stock').innerHTML = lowStockList.map(p => `
+                    <tr class="border-b border-gray-700">
+                        <td class="py-2">${p.name}</td>
+                        <td class="py-2 text-red-400 font-bold">${p.stock}</td>
+                        <td class="py-2"><button onclick="app.switchView('products'); app.editProduct(${p.id});" class="text-xs text-primary underline">Restock</button></td>
+                    </tr>
+                `).join('') || `<tr><td colspan="3" class="py-2 text-gray-500">All stock levels normal.</td></tr>`;
+
+                document.getElementById('dash-recent-sales').innerHTML = this.sales.slice(0, 5).map(s => `
+                    <tr class="border-b border-gray-700">
+                        <td class="py-2 font-mono">${s.id}</td>
+                        <td class="py-2">${s.customer?.name || 'Customer'}</td>
+                        <td class="py-2 text-green-400">${this.settings.currency} ${s.total.toFixed(2)}</td>
+                    </tr>
+                `).join('') || `<tr><td colspan="3" class="py-2 text-gray-500">No recent orders.</td></tr>`;
+            },
+
+            renderReports() {
+                const totalRev = this.sales.reduce((acc, s) => acc + s.total, 0);
+                const totalProfit = this.calculateProfitForSales(this.sales);
+                let totalItemsSold = 0;
+
+                this.sales.forEach(s => {
+                    s.items.forEach(i => {
+                        totalItemsSold += i.qty;
+                    });
+                });
+
+                document.getElementById('rep-rev').textContent = `${this.settings.currency} ${totalRev.toFixed(2)}`;
+                document.getElementById('rep-profit').textContent = `${this.settings.currency} ${totalProfit.toFixed(2)}`;
+                document.getElementById('rep-trans').textContent = this.sales.length;
+                document.getElementById('rep-items').textContent = totalItemsSold;
+            },
+
+            populateSettingsForm() {
+                document.getElementById('set-company').value = this.settings.company || '';
+                document.getElementById('set-phone').value = this.settings.phone || '';
+                document.getElementById('set-address').value = this.settings.address || '';
+                document.getElementById('set-logo').value = this.settings.logo || '';
+                document.getElementById('set-currency').value = this.settings.currency || 'Rs.';
+                document.getElementById('set-delivery').value = this.settings.delivery || 0;
+                document.getElementById('set-tax').value = this.settings.tax || 0;
+                document.getElementById('set-receipt-size').value = this.settings.receiptSize || '80mm';
+                document.getElementById('set-prefix').value = this.settings.prefix || 'UM-';
+                document.getElementById('set-footer').value = this.settings.footer || '';
+                document.getElementById('set-print-merchant').checked = this.settings.dualPrint || false;
+
+                const currentUser = window.firebaseAuth?.auth?.currentUser?.email || '';
+                if(document.getElementById('acc-current-email')) {
+                    document.getElementById('acc-current-email').value = currentUser;
+                    document.getElementById('acc-new-email').value = currentUser;
+                }
+            },
+
+            saveSettings(e) {
+                e.preventDefault();
+                this.settings.company = document.getElementById('set-company').value.trim();
+                this.settings.phone = document.getElementById('set-phone').value.trim();
+                this.settings.address = document.getElementById('set-address').value.trim();
+                this.settings.logo = document.getElementById('set-logo').value.trim();
+                this.settings.currency = document.getElementById('set-currency').value.trim();
+                this.settings.delivery = parseFloat(document.getElementById('set-delivery').value) || 0;
+                this.settings.tax = parseFloat(document.getElementById('set-tax').value) || 0;
+                this.settings.receiptSize = document.getElementById('set-receipt-size').value;
+                this.settings.prefix = document.getElementById('set-prefix').value.trim();
+                this.settings.footer = document.getElementById('set-footer').value.trim();
+                this.settings.dualPrint = document.getElementById('set-print-merchant').checked;
+
+                this.saveSettingsToStorage();
+                document.getElementById('cart-delivery').value = this.settings.delivery;
+                alert("Settings saved successfully!");
+                this.init();
+            },
+
+            hardReset() {
+                if (confirm("WARNING: This will wipe all products, order history, and settings! Proceed?")) {
+                    localStorage.clear();
+                    location.reload();
+                }
+            },
+
+            exportProducts() {
+                const blob = new Blob([JSON.stringify(this.products, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `unyt_mart_products_${Date.now()}.json`;
+                a.click();
+            },
+
+            importProducts(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        if (Array.isArray(imported)) {
+                            this.products = imported;
+                            this.saveProducts();
+                            this.renderProductsTable();
+                            this.renderPosGrid();
+                            alert("Products imported successfully!");
+                        }
+                    } catch (err) {
+                        alert("Invalid JSON File!");
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
