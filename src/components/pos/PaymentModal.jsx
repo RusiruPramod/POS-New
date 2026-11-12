@@ -5,7 +5,7 @@ import { dispatchToCourier, sendOrderNotificationSMS } from "../../services/inte
 import { X, CheckCircle, Smartphone, Truck, Banknote, DollarSign } from "lucide-react";
 
 export const PaymentModal = ({ isOpen, onClose }) => {
-  const { cartTotal, settings, finalizeSale, printReceipt } = usePOS();
+  const { cartTotal, settings, finalizeSale, printReceipt, setMobilePosTab } = usePOS();
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -56,6 +56,7 @@ export const PaymentModal = ({ isOpen, onClose }) => {
       setCustomerAddress("");
       setCourierTracking("");
       setCashReceived("");
+      if (setMobilePosTab) setMobilePosTab("catalog");
       onClose();
 
       // Trigger Integration services (Courier / SMS)

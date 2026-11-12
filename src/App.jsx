@@ -53,7 +53,10 @@ const MainLayout = () => {
           <main className="flex-1 flex flex-col relative h-full overflow-hidden bg-gradient-to-br from-slate-100 via-slate-50 to-gray-100 dark:from-darkBg dark:via-slate-900 dark:to-gray-950 transition-colors duration-200">
             <Header />
 
-            <div className="flex-1 overflow-y-auto p-3 md:p-6 relative">
+            <div
+              className={`flex-1 p-2.5 sm:p-4 md:p-6 relative ${currentView === "pos" ? "overflow-hidden flex flex-col" : "overflow-y-auto"
+                }`}
+            >
               {renderActiveView()}
             </div>
           </main>

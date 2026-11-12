@@ -30,6 +30,10 @@ export const POSProvider = ({ children }) => {
   const [cloudSyncing, setCloudSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState(null);
 
+  // Mobile responsiveness helpers
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [mobilePosTab, setMobilePosTab] = useState("catalog"); // 'catalog' | 'cart'
+
   // Printing state
   const [activePrintSale, setActivePrintSale] = useState(null);
   const [financePrintData, setFinancePrintData] = useState(null);
@@ -354,6 +358,28 @@ export const POSProvider = ({ children }) => {
     }, 150);
   };
 
+  const scanBarcode = (code) => {
+    if (!code || !code.trim()) return { success: false, error: "Empty code" };
+    const clean = code.trim().toLowerCase();
+    const match = products.find(
+      (p) => (p.sku && p.sku.toLowerCase() === clean) || p.name.toLowerCase() === clean
+    );
+    if (match) {
+      if (match.stock > 0) {
+        addToCart(match.id);
+        return { success: true, product: match };
+      } else {
+        return { success: false, error: `"${match.name}" is out of stock!` };
+      }
+    }
+    return { success: false, error: "No product found with barcode/SKU: " + code };
+  };
+
+  const handleSetCurrentView = (view) => {
+    setCurrentView(view);
+    setIsMobileNavOpen(false);
+  };
+
   return (
     <POSContext.Provider
       value={{
@@ -375,8 +401,13 @@ export const POSProvider = ({ children }) => {
         cartTotal,
         activePrintSale,
         financePrintData,
+        isMobileNavOpen,
+        mobilePosTab,
+        setIsMobileNavOpen,
+        setMobilePosTab,
+        scanBarcode,
         setActiveCategory,
-        setCurrentView,
+        setCurrentView: handleSetCurrentView,
         setCartDeliveryFee,
         setCartIsFreeDelivery,
         setCartShowDeliverySep,
